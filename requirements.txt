@@ -1,0 +1,5 @@
+kfp~=1.8.12
+pyyaml~=5.4.1
+kubernetes~=18.20.0
+pathlib2~=2.3.6
+keras~=2.8.0

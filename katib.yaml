@@ -1,0 +1,63 @@
+apiVersion: kubeflow.org/v1beta1
+kind: Experiment
+metadata:
+  namespace: NAMESPACE
+  name: EXPERIMENT_NAME
+spec:
+  parallelTrialCount: 1
+  maxTrialCount: 12
+  maxFailedTrialCount: 1
+  objective:
+    type: minimize
+    goal: 121331.32
+    objectiveMetricName: TotalLoss
+  algorithm:
+    algorithmName: random
+  parameters:
+    - name: lr
+      parameterType: double
+      feasibleSpace:
+        min: "0.01"
+        max: "0.03"
+  trialTemplate:
+    retain: true
+    primaryContainerName: training-container
+    trialParameters:
+      - name: learningRate
+        description: Learning rate for the training model
+        reference: lr
+    trialSpec:
+      apiVersion: batch/v1
+      kind: Job
+      spec:
+        template:
+          metadata:
+            labels:
+              mount-kerberos-secret: "true"
+              mount-eos: "true"
+              mount-nvidia-driver: "true"
+            annotations:
+              sidecar.istio.io/inject: "false"
+          spec:
+            volumes:
+            - name: eos
+              hostPath:
+                path: /var/eos
+            - name: krb-secret-vol
+              secret:
+                secretName: krb-secret
+            - name: nvidia-driver
+              hostPath:
+                path: /opt/nvidia-driver
+                type: ""
+            containers:
+              - name: training-container
+                image: gitlab-registry.cern.ch/gkohli/mlfastsim-kubeflow-pipeline:python-katibtrial2
+                resources:
+                  limits:
+                    nvidia.com/gpu: 1
+                command:
+                  - "python3"
+                  - "./main.py"
+                  - "--lr=${trialParameters.learningRate}"
+            restartPolicy: Never
